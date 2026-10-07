@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>澳門巴士 MT2 路線 LED 報站機 (完美復刻修復版)</title>
+  
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: #000000;
+      color: #ff9900;
+      font-family: "PMingLiU", "MingLiU", "新細明體", Arial, sans-serif;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      touch-action: manipulation;
+    }
+    .container { max-width: 100%; width: 100%; }
+    .header-badge {
+      display: inline-block;
+      background-color: #ff9900;
+      color: #000;
+      font-weight: bold;
+      padding: 3px 10px;
+      border-radius: 4px;
+      font-size: 14px;
+      margin-bottom: 6px;
+    }
+    h2 {
+      color: #ff9900;
+      margin-bottom: 12px;
+      text-align: center;
+      font-size: 20px;
+      font-family: "PMingLiU", "MingLiU", "新細明體", serif;
+    }
+    .mode-bar {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      background-color: #000;
+      border: 1px solid #ff9900;
+      padding: 8px;
+      border-radius: 8px;
+      margin-bottom: 12px;
+    }
+    .mode-btn {
+      background-color: #000;
+      color: #ffaa00;
+      border: 1px solid #ff9900;
+      padding: 6px 12px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 13px;
+      flex: 1;
+      font-family: "PMingLiU", "MingLiU", "新細明體", Arial, sans-serif;
+    }
+    .mode-btn.active { background-color: #ff9900; color: #000; }
+    .gps-status-panel {
+      background-color: #000;
+      border: 1px dashed #ff9900;
+      border-radius: 6px;
+      padding: 8px 12px;
+      margin-bottom: 12px;
+      font-size: 12px;
+      color: #ffaa00;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .gps-indicator {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: #555;
+      margin-right: 4px;
+    }
+    .gps-indicator.active {
+      background-color: #00ff00;
+      box-shadow: 0 0 6px #00ff00;
+    }
+    .led-board {
+      background-color: #000;
+      border: 5px solid #ff9900;
+      border-radius: 8px;
+      padding: 15px 10px;
+      box-shadow: 0 0 15px rgba(255, 153, 0, 0.3);
+      margin-bottom: 15px;
+      overflow: hidden;
+      position: relative;
+    }
+    .led-row {
+      width: 100%;
+      height: 45px;
+      line-height: 45px;
+      overflow: hidden;
+      position: relative;
+      white-space: nowrap;
+    }
+    .led-row-zh { margin-bottom: 5px; }
+    .led-text {
+      color: #ff9900;
+      display: inline-block;
+      text-shadow: 0 0 4px #ff9900;
+      letter-spacing: 1.5px;
+      position: relative;
+    }
+    .led-text-zh {
+      font-family: "PMingLiU", "MingLiU", "新細明體", serif;
+      font-size: 28px;
+      font-weight: bold;
+    }
+    .led-text-pt {
+      font-family: Arial, sans-serif;
+      font-size: 24px;
+      font-weight: 600;
+      text-transform: uppercase;
+      color: #ff9900;
+    }
+    .led-text::after {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background-image: 
+        linear-gradient(to right, rgba(0, 0, 0, 0.75) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(0, 0, 0, 0.75) 1px, transparent 1px);
+      background-size: 3px 3px;
+      pointer-events: none;
+    }
+    
+    .align-center { width: 100%; text-align: center; }
+    .align-left { width: 100%; text-align: left; }
+
+    .scroll-right-to-left {
+      display: inline-block;
+      padding-left: 100%;
+      animation: marquee 8s linear infinite;
+    }
+    @keyframes marquee {
+      0% { transform: translateX(0%); }
+      100% { transform: translateX(-100%); }
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 15px;
+    }
+    .btn {
+      background-color: #000;
+      color: #ff9900;
+      border: 2px solid #ff9900;
+      padding: 12px 6px;
+      font-size: 14px;
+      font-weight: bold;
+      border-radius: 6px;
+      cursor: pointer;
+      text-align: center;
+      touch-action: manipulation;
+      font-family: "PMingLiU", "MingLiU", "新細明體", Arial, sans-serif;
+    }
+    .btn:active { background-color: #ff9900; color: #000; }
+    .btn-door { border-color: #ff5500; color: #ff5500; grid-column: span 3; }
+    .btn-door:active { background-color: #ff5500; color: #000; }
+    .btn-calibrate { border-color: #00ccff; color: #00ccff; grid-column: span 3; }
+    .btn-calibrate:active { background-color: #00ccff; color: #000; }
+    .btn-tips { border-color: #ffaa00; color: #ffaa00; grid-column: span 3; }
+    
+    .station-list {
+      background-color: #000;
+      border-radius: 8px;
+      padding: 8px;
+      max-height: 240px;
+      overflow-y: auto;
+      border: 1px solid #ff9900;
+    }
+    .station-item {
+      display: flex;
+      align-items: center;
+      padding: 8px;
+      border-bottom: 1px solid #331a00;
+    }
+    .station-item.active {
+      background-color: #331a00;
+      border-left: 4px solid #ff9900;
+    }
+    .station-code { color: #ff9900; font-weight: bold; width: 50px; font-size: 13px; font-family: Arial, sans-serif; }
+    .station-name-zh { color: #ff9900; font-weight: bold; flex-grow: 1; font-size: 15px; font-family: "PMingLiU", "MingLiU", "新細明體", serif; }
+    .station-name-pt { color: #cc7a00; font-size: 12px; font-family: Arial, sans-serif; font-weight: 600; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <div style="text-align: center;">
+    <span class="header-badge">澳門巴士 MT2 路線</span>
+    <h2>LED 報站機 (完美復刻修復版)</h2>
+  </div>
+
+  <div class="mode-bar">
+    <button id="btn-manual-mode" class="mode-btn active" onclick="switchMode('MANUAL')">🖐 手動控制</button>
+    <button id="btn-gps-mode" class="mode-btn" onclick="switchMode('GPS')">📡 定位 GPS 自動</button>
+  </div>
+
+  <div class="gps-status-panel">
+    <div>
+      <span id="gps-dot" class="gps-indicator"></span>
+      <strong>GPS：</strong><span id="gps-status-text">未開啟</span>
+    </div>
+    <div id="gps-coords">座標：-- , --</div>
+  </div>
+
+  <div class="led-board">
+    <div class="led-row led-row-zh">
+      <div id="led-zh" class="led-text led-text-zh"></div>
+    </div>
+    <div class="led-row">
+      <div id="led-pt" class="led-text led-text-pt"></div>
+    </div>
+  </div>
+
+  <audio id="bus-audio" preload="auto"></audio>
+
+  <div class="controls">
+    <button class="btn" onclick="prevStation()">◀ 上一站</button>
+    <button class="btn" onclick="triggerNextStation()">🔊 下一站</button>
+    <button class="btn" onclick="nextStation()">下一站 ▶</button>
+    <button class="btn" onclick="triggerArrivingStation()" style="grid-column: span 3; margin-top:4px;">🔊 廣播：到站</button>
+    <button class="btn btn-calibrate" onclick="calibrateCurrentLocation()">🎯 人手強制校準目前位置</button>
+    <button class="btn btn-door" onclick="closeDoorAction()">🚪 關門（音效/提示）</button>
+    <button class="btn btn-tips" onclick="triggerTipsBroadcast()">💡 人手提示廣播 (Tips)</button>
+  </div>
+
+  <div class="station-list" id="station-list"></div>
+</div>
+
+<script>
+  try {
+    const routeMT2 = [
+      { code: "M268", zh: "城市日前地", pt: "Praceta 24 de Junho", lat: 22.186831, lng: 113.550125 },
+      { code: "M172", zh: "亞馬喇前地", pt: "Praça Ferreira Amaral", lat: 22.188820, lng: 113.542211 },
+      { code: "T330", zh: "蘇利安圓形地", pt: "Rotunda Leonel Sousa", lat: 22.164512, lng: 113.546310 },
+      { code: "T335", zh: "海洋廣場", pt: "Plaza Oceano", lat: 22.158402, lng: 113.543021 },
+      { code: "T338", zh: "海洋花園衛生中心", pt: "Centro de Saúde dos Jardins do Oceano", lat: 22.156105, lng: 113.542812 },
+      { code: "T326", zh: "柯維納馬路", pt: "Estrada Gov. A. Oliveira", lat: 22.154212, lng: 113.550401 },
+      { code: "T361", zh: "南新花園", pt: "Edf. Nam Sun", lat: 22.155811, lng: 113.553202 },
+      { code: "T325", zh: "美景花園", pt: "Edf. Mei Keng Garden", lat: 22.155001, lng: 113.555210 },
+      { code: "T412", zh: "氹仔中央公園／成都街", pt: "Parque Central da Taipa / R. Seng Tou", lat: 22.153912, lng: 113.558012 },
+      { code: "T352", zh: "廣東大馬路／濠景", pt: "Av. Kwong Tung / Nova Taipa", lat: 22.156201, lng: 113.557610 },
+      { code: "T332", zh: "賽馬會", pt: "Jockey Club", lat: 22.152802, lng: 113.549210 },
+      { code: "T326", zh: "柯維納馬路", pt: "Estrada Gov. A. Oliveira", lat: 22.154212, lng: 113.550401 },
+      { code: "T337", zh: "氹仔海濱花園", pt: "Edifício Jardim Beira-Mar", lat: 22.156810, lng: 113.545012 },
+      { code: "T334", zh: "海洋花園／紫荊苑", pt: "Jardins do Oceano / Bauhinia Court", lat: 22.159201, lng: 113.544510 },
+      { code: "M69",  zh: "葡京酒店", pt: "Hotal Lisboa", lat: 22.189512, lng: 113.543501 },
+      { code: "M263", zh: "總統酒店", pt: "Hotal Presidente", lat: 22.188402, lng: 113.548012 },
+      { code: "M262", zh: "城市日大馬路／波爾圖街", pt: "Av. 24 de Junho / Rua de Porto", lat: 22.186210, lng: 113.550512 }
+    ];
+
+    const welcomePages = [
+      { zh: "歡迎乘坐澳巴", pt: "Bem vindo à Sociedade de Transportes Colectivos de Macau" }
+    ];
+
+    let currentIndex = 0;
+    let currentTipsIndex = 0;
+    let pageTimer = null;
+    let welcomeLoopTimer = null;
+    let currentPageType = "ARRIVE";
+    let welcomePageIndex = 0;
+
+    let currentMode = "MANUAL";
+    let watchPositionId = null;
+    let lastUserLat = null;
+    let lastUserLng = null;
+    let manualLockUntil = 0;
+
+    function switchMode(mode) {
+      currentMode = mode;
+      document.getElementById("btn-manual-mode").classList.toggle("active", mode === 'MANUAL');
+      document.getElementById("btn-gps-mode").classList.toggle("active", mode === 'GPS');
+
+      const gpsDot = document.getElementById("gps-dot");
+      const gpsStatusText = document.getElementById("gps-status-text");
+
+      if (mode === 'GPS') {
+        gpsStatusText.textContent = "搜尋中...";
+        startGpsTracking();
+      } else {
+        stopGpsTracking();
+        gpsDot.classList.remove("active");
+        gpsStatusText.textContent = "已關閉";
+        document.getElementById("gps-coords").textContent = "座標：-- , --";
+      }
+    }
+
+    function calculateDistance(lat1, lon1, lat2, lon2) {
+      const R = 6371000;
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLon = (lon2 - lon1) * Math.PI / 180;
+      const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
+
+    function startGpsTracking() {
+      if (!navigator.geolocation) {
+        alert("您的裝置不支援 GPS。");
+        switchMode('MANUAL');
+        return;
+      }
+      watchPositionId = navigator.geolocation.watchPosition(
+        (pos) => {
+          lastUserLat = pos.coords.latitude;
+          lastUserLng = pos.coords.longitude;
+          document.getElementById("gps-dot").classList.add("active");
+          document.getElementById("gps-status-text").textContent = "定位正常";
+          document.getElementById("gps-coords").textContent = `${lastUserLat.toFixed(5)}, ${lastUserLng.toFixed(5)}`;
+        },
+        (err) => {
+          document.getElementById("gps-dot").classList.remove("active");
+          document.getElementById("gps-status-text").textContent = "定位失敗";
+        },
+        { enableHighAccuracy: true, maximumAge: 1000, timeout: 10000 }
+      );
+    }
+
+    function stopGpsTracking() {
+      if (watchPositionId !== null) {
+        navigator.geolocation.clearWatch(watchPositionId);
+        watchPositionId = null;
+      }
+    }
+
+    function calibrateCurrentLocation() {
+      manualLockUntil = Date.now() + 8000;
+      if (lastUserLat === null || lastUserLng === null) {
+        alert("⚠️ 未能取得 GPS 定位。");
+        return;
+      }
+      let minDistance = Infinity;
+      let closestIndex = currentIndex;
+      routeMT2.forEach((st, idx) => {
+        const dist = calculateDistance(lastUserLat, lastUserLng, st.lat, st.lng);
+        if (dist < minDistance) {
+          minDistance = dist;
+          closestIndex = idx;
+        }
+      });
+      currentIndex = closestIndex;
+      triggerArrivingStation();
+      alert(`🎯 已校準至：${routeMT2[currentIndex].zh}`);
+    }
+
+    function setLedText(elementId, text, isChinese) {
+      const el = document.getElementById(elementId);
+      if (!el) return;
+      el.className = "led-text " + (isChinese ? "led-text-zh" : "led-text-pt");
+      el.style.animation = 'none';
+      el.offsetHeight;
+      el.style.animation = null;
+
+      const maxStaticLen = isChinese ? 10 : 20;
+      if (text.length <= maxStaticLen) {
+        el.classList.add(isChinese && text === "歡迎乘坐澳巴" ? "align-center" : "align-left");
+        el.innerHTML = text;
+      } else {
+        el.classList.add("scroll-right-to-left");
+        el.innerHTML = text;
+      }
+    }
+
+    function renderDisplay() {
+      const station = routeMT2[currentIndex];
+      if (currentPageType === "NEXT") {
+        setLedText("led-zh", `下一站：${station.zh}`, true);
+        setLedText("led-pt", `Próxima Paragem: ${station.code} ${station.pt}`, false);
+      } else if (currentPageType === "ARRIVE") {
+        setLedText("led-zh", `到站：${station.zh}`, true);
+        setLedText("led-pt", `Chegada: ${station.code} ${station.pt}`, false);
+      } else if (currentPageType === "WELCOME") {
+        setLedText("led-zh", welcomePages[welcomePageIndex].zh, true);
+        setLedText("led-pt", welcomePages[welcomePageIndex].pt, false);
+      }
+      highlightStationInList();
+    }
+
+    function startDisplayLoop(initialType) {
+      if (pageTimer) clearTimeout(pageTimer);
+      if (welcomeLoopTimer) clearInterval(welcomeLoopTimer);
+
+      currentPageType = initialType;
+      welcomePageIndex = 0;
+      renderDisplay();
+
+      pageTimer = setTimeout(() => {
+        currentPageType = "WELCOME";
+        welcomePageIndex = 0;
+        renderDisplay();
+        welcomeLoopTimer = setInterval(() => {
+          welcomePageIndex = (welcomePageIndex + 1) % welcomePages.length;
+          renderDisplay();
+        }, 7000);
+      }, initialType === "ARRIVE" ? 20000 : 90000);
+    }
+
+    function playAudioByFileName(fileName) {
+      const audio = document.getElementById("bus-audio");
+      if (!audio) return;
+      audio.src = `./audio/${fileName}`;
+      audio.play().catch(err => console.log("音檔播放略過（不影響畫面）"));
+    }
+
+    function closeDoorAction() {
+      triggerTipsBroadcast();
+    }
+
+    function triggerNextStation() {
+      startDisplayLoop("NEXT");
+      const audioIndex = currentIndex - 1;
+      if (audioIndex >= 0) {
+        playAudioByFileName(`${audioIndex}.mp3`);
+      }
+    }
+
+    function triggerArrivingStation() {
+      startDisplayLoop("ARRIVE");
+      if (currentIndex === 0) return;
+      let fileName = (currentIndex === routeMT2.length - 1) ? "terminus.mp3" : "stop1.mp3";
+      playAudioByFileName(fileName);
+    }
+
+    function triggerTipsBroadcast() {
+      playAudioByFileName(`tips${currentTipsIndex}.mp3`);
+      currentTipsIndex = (currentTipsIndex + 1) % 3;
+    }
+
+    function nextStation() {
+      manualLockUntil = Date.now() + 8000;
+      if (currentIndex < routeMT2.length - 1) {
+        currentIndex++;
+        triggerNextStation();
+      }
+    }
+
+    function prevStation() {
+      manualLockUntil = Date.now() + 8000;
+      if (currentIndex > 0) {
+        currentIndex--;
+        if (currentIndex === 0) {
+          startDisplayLoop("ARRIVE");
+        } else {
+          triggerNextStation();
+        }
+      }
+    }
+
+    function selectStation(idx) {
+      manualLockUntil = Date.now() + 8000;
+      currentIndex = idx;
+      if (currentIndex === 0) {
+        startDisplayLoop("ARRIVE");
+      } else {
+        triggerNextStation();
+      }
+    }
+
+    function renderStationList() {
+      const listContainer = document.getElementById("station-list");
+      if (!listContainer) return;
+      listContainer.innerHTML = "";
+      routeMT2.forEach((st, idx) => {
+        const item = document.createElement("div");
+        item.className = `station-item ${idx === currentIndex ? 'active' : ''}`;
+        item.onclick = () => selectStation(idx);
+        item.innerHTML = `
+          <span class="station-code">${st.code}</span>
+          <span class="station-name-zh">${st.zh}</span>
+          <span class="station-name-pt">${st.pt}</span>
+        `;
+        listContainer.appendChild(item);
+      });
+    }
+
+    function highlightStationInList() {
+      const items = document.querySelectorAll(".station-item");
+      items.forEach((item, idx) => {
+        item.classList.toggle("active", idx === currentIndex);
+      });
+    }
+
+    renderStationList();
+    startDisplayLoop("ARRIVE");
+
+  } catch (err) {
+    alert("程式載入發生錯誤：" + err.message);
+  }
+</script>
+
+</body>
+</html>
